@@ -17,7 +17,7 @@ class Comma(Spliter):
 class Paren(Spliter):
     pass
 
-class Keyword:
+class Keyword(Token):
     pass
 
 class Field(Token):

@@ -1,4 +1,4 @@
-from sqlparser import parse
+from .lexer import parse, tokenize
 
 
 sql = '''
@@ -18,6 +18,8 @@ sql = '''
     order by col2-1
 '''
 
-l = parse(sql)
+for t in tokenize(sql):
+    print(t)
 
-print(l)
+
+

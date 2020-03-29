@@ -3,9 +3,8 @@ from .tokens import *
 
 
 def is_keyword(value):
-    if value in KEYWORDS:
-        return Keyword(value)
-    return Field(value)
+    t = KEYWORDS.get(value.upper(), Field)
+    return t(value)
 
 
 SEPERATOR = r'[\r\n\s,\(\)]'
@@ -21,3 +20,20 @@ SQL_REGEX = [
 
 FLAGS = re.IGNORECASE | re.UNICODE
 REG = [(re.compile(rx, FLAGS).match, tt) for rx, tt in SQL_REGEX]
+
+
+COMMON_KEYWORDS = [
+    'SELECT',
+    'UPDATE',
+    'INSERT',
+    'DELETE',
+    'FROM',
+    'WHERE',
+    'ON',
+    'IN',
+    'AS',
+    'DISTINCT',
+]
+
+
+KEYWORDS = dict.fromkeys(COMMON_KEYWORDS, Keyword)
