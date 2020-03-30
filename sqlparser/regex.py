@@ -1,9 +1,12 @@
 import re
 from .tokens import *
+from .keywords import COMMON, COMPOSITE
 
 
 def is_keyword(value):
-    t = KEYWORDS.get(value.upper(), Field)
+    val = value.upper()
+    t = (COMMON_KEYWORDS.get(val)
+        or COMPOSITE_KEYWORDS.get(val, Name))
     return t(value)
 
 
@@ -15,25 +18,12 @@ SQL_REGEX = [
     (r',', Comma),
     (r'[\(\)]', Paren),
     (r'[\w]+(?='+ SEPERATOR +')', is_keyword),
-    (r'[\w\*\-\+\/_\.\>\<\=]+(?='+ SEPERATOR +')', Field),
+    (r'[\w\*\-\+\/_\.\>\<\=]+(?='+ SEPERATOR +')', Name),
 ]
 
 FLAGS = re.IGNORECASE | re.UNICODE
 REG = [(re.compile(rx, FLAGS).match, tt) for rx, tt in SQL_REGEX]
 
 
-COMMON_KEYWORDS = [
-    'SELECT',
-    'UPDATE',
-    'INSERT',
-    'DELETE',
-    'FROM',
-    'WHERE',
-    'ON',
-    'IN',
-    'AS',
-    'DISTINCT',
-]
-
-
-KEYWORDS = dict.fromkeys(COMMON_KEYWORDS, Keyword)
+COMMON_KEYWORDS = dict.fromkeys(COMMON, Keyword)
+COMPOSITE_KEYWORDS = dict.fromkeys(COMPOSITE.keys(), CompositeKeyword)
