@@ -17,13 +17,16 @@ SQL_REGEX = [
     (r'[\s\r\n]+', Space),
     (r',', Comma),
     (r'[\(\)]', Paren),
-    (r'[\w]+(?='+ SEPERATOR +')', is_keyword),
-    (r'[\w\*\-\+\/_\.\>\<\=]+(?='+ SEPERATOR +')', Name),
+    (r'[\+\-\*\/><=]', Operator),
+    (r'\d*\.\d+', Value),
+    (r'\d+', Value),
+    (r'[\w]+\b', is_keyword),
+    (r'[\w\_\.\*]+\b', Name),
 ]
 
 FLAGS = re.IGNORECASE | re.UNICODE
 REG = [(re.compile(rx, FLAGS).match, tt) for rx, tt in SQL_REGEX]
 
 
-COMMON_KEYWORDS = dict.fromkeys(COMMON, Keyword)
+COMMON_KEYWORDS = dict.fromkeys(COMMON.keys(), Keyword)
 COMPOSITE_KEYWORDS = dict.fromkeys(COMPOSITE.keys(), CompositeKeyword)

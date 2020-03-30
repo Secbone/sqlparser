@@ -23,23 +23,26 @@ class Lexer:
     
     @property
     def last_token(self):
-        size = len(self)
-        if size > 0:
+        if self.size > 0:
             return self.tokens[-1]
         
         return None
     
-    def __len__(self):
+    @property
+    def size(self):
         return len(self.tokens)
     
+    def __len__(self):
+        return self.size
+    
     def _safe_idx(self, idx: int):
-        if idx >= len(self.tokens):
+        if idx >= self.size:
             return None
         
         return self.tokens[idx]
     
     def _push(self, token: Token):
-        idx = len(self)
+        idx = self.size
 
         self.tokens.append(token)
 
@@ -52,21 +55,59 @@ class Lexer:
 
 
     def push(self, token: Token):
-        if isinstance(token, CompositeKeyword):
+        if isinstance(self.last_token, Function) and not self.last_token.is_close:
+            self._push_function(token)
+        elif isinstance(token, CompositeKeyword):
             self._push_composite(token)
+        elif isinstance(token, Paren):
+            self._push_paren(token)
+        elif isinstance(token, Operator):
+            self._push_operator(token)
         else:
             self._push(token)
+
+    def _push_function(self, token: Token):
+        func = self.last_token
+        if isinstance(token, Paren) and not token.is_open:
+            # function end
+            func.is_close = True
+            return
+        
+        func.push(token)
     
 
+    def _push_operator(self, token: Operator):
+        if not isinstance(self.last_word, Value):
+            token = Name(token.value)
+        
+        # TODO push operator
+        self._push(token)
+
+    
+    def _push_paren(self, token: Paren):
+        if token.is_open:
+            if isinstance(self.last_token, Name):
+                # is function
+                self.tokens[-1] = Function(self.last_token.value)
+            else:
+                # sub sentence
+                # TODO sub sentence recursive push
+                self._push(token)
+                # self._paren_stack.append(self.size)
+        else:
+            # close paren
+            self._push(token)
+
+    
     def _push_composite(self, token: Keyword):
         if not isinstance(self.last_word, CompositeKeyword):
             # first composite keyword
-            token.start_at = len(self)
+            token.start_at = self.size
 
         elif token.keyword not in self.last_word.follow_words:
             # composite keyword not match
             # TODO covert last_word to keyword or raise error
-            token.start_at = len(self)
+            token.start_at = self.size
         
         elif token.follow_words is not None:
             # composite keyword not end
@@ -96,7 +137,7 @@ class Lexer:
                 consume(iterable, m.end() - pos - 1)
                 break
             else:
-                raise Exception(char)
+                raise Exception('{0} at pos {1}'.format(sql[pos-10: pos], pos))
         
         return self.tokens
 
