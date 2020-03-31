@@ -18,10 +18,10 @@ SQL_REGEX = [
     (r',', Comma),
     (r'[\(\)]', Paren),
     (r'[\+\-\*\/><=]', Operator),
-    (r'\d*\.\d+', Value),
+    (r'\d*(\.\d+)?E-?\d+', Value),
     (r'\d+', Value),
-    (r'[\w]+\b', is_keyword),
-    (r'[\w\_\.\*]+\b', Name),
+    (r'[\w]+(?=\s)', is_keyword),
+    (r'[\w\.]+', Name),
 ]
 
 FLAGS = re.IGNORECASE | re.UNICODE

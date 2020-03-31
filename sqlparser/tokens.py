@@ -1,4 +1,3 @@
-
 from .keywords import COMPOSITE
 
 T_SPACE = 1
@@ -32,22 +31,54 @@ class Paren(Spliter):
     def is_open(self):
         return self.value == '('
 
+class Buffer(Token):
+    def check(self, token):
+        return False
+    
+    def is_end(self, token):
+        return True
+    
+    def combine(self, tokens):
+        raise NotImplemented('combine method must be implemented')
+
+class Negtive(Buffer):
+    def check(self, token):
+        return isinstance(token, Value)
+    
+    def is_end(self, token):
+        return True
+    
+    def combine(self, tokens):
+        return Value(''.join([t.value for t in tokens]))
+
 class Keyword(Token):
     @property
     def keyword(self):
         return self.value.upper()
 
-class CompositeKeyword(Keyword):
-    start_at = 0
-    follow_words = None
-    
+class CompositeKeyword(Keyword, Buffer):
     def __init__(self, v):
         super().__init__(v)
         self.follow_words = COMPOSITE.get(self.keyword)
+    
+    def check(self, token):
+        if isinstance(token, Keyword) and token.keyword in self.follow_words:
+            return True
+        
+        return False
+    
+    def is_end(self, token):
+        if isinstance(token, CompositeKeyword) and token.follow_words is None:
+            return True
+        return False
+    
+    def combine(self, tokens):
+        return Keyword(' '.join([t.value for t in tokens]))
 
 
 class Value(Token):
-    pass
+    def repr(self):
+        return repr(type(self.value)) + repr(self.value)
 
 class Name(Value):
     pass
@@ -56,31 +87,32 @@ class Operator(Token):
     pass
 
 class Sub(Token):
-    tokens = []
-    is_close = False
+    def __init__(self, v):
+        super().__init__(v)
+
+        from .lexer import Lexer
+        self._lexer = Lexer()
+
+        self.is_close = False
+    
+    @property
+    def tokens(self):
+        return self._lexer.tokens
 
     def _push(self, token: Token):
         pass
 
     def push(self, token: Token):
         self._push(token)
-        self.tokens.append(token)
+        self._lexer.push(token)
 
 class Function(Sub):
-    arguments = []
-
     @property
     def name(self):
         return self.value
     
-    def _push(self, token: Token):
-        if not isinstance(token, Value):
-            return
-        
-        self.arguments.append(token)
-    
     def repr(self):
-        return repr(self.name)+ '(' +','.join([repr(t) for t in self.arguments]) + ')'
+        return repr(self.name)+ '(' +','.join([repr(t) for t in self.tokens]) + ')'
 
 
 class Column(Name):

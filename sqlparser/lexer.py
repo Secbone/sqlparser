@@ -9,9 +9,11 @@ def consume(iterator, n):
 
 
 class Lexer:
-    tokens = []
-    _last_kw_idx = 0
-    _last_word_idx = 0
+    def __init__(self):
+        self.tokens = []
+        self._buffer = []
+        self._last_kw_idx = 0
+        self._last_word_idx = 0
 
     @property
     def last_keyword(self):
@@ -55,10 +57,15 @@ class Lexer:
 
 
     def push(self, token: Token):
+        if len(self._buffer) > 0 or isinstance(token, Buffer):
+            self._push_buffer(token)
+        else:
+            self._dispatch_token(token)
+        
+    
+    def _dispatch_token(self, token: Token):
         if isinstance(self.last_token, Function) and not self.last_token.is_close:
             self._push_function(token)
-        elif isinstance(token, CompositeKeyword):
-            self._push_composite(token)
         elif isinstance(token, Paren):
             self._push_paren(token)
         elif isinstance(token, Operator):
@@ -78,6 +85,10 @@ class Lexer:
 
     def _push_operator(self, token: Operator):
         if not isinstance(self.last_word, Value):
+            if token.value == '-':
+                self._push_buffer(Negtive('-'))
+                return
+            
             token = Name(token.value)
         
         # TODO push operator
@@ -97,6 +108,35 @@ class Lexer:
         else:
             # close paren
             self._push(token)
+    
+    def _push_buffer(self, token):
+        if isinstance(token, Space):
+            return
+        
+        if len(self._buffer) < 1:
+            self._buffer.append(token)
+            return
+        
+        l_token = self._buffer[-1]
+        if not l_token.check(token):
+            # error check
+            # TODO convert token type when error
+            self._push(l_token.combine(self._buffer))
+            self._buffer.clear()
+            
+            if isinstance(token, Buffer):
+                self._buffer.append(token)
+            else:
+                self._dispatch_token(token)
+            return
+        
+        # token matched
+        self._buffer.append(token)
+
+        if l_token.is_end(token):
+            self._push(l_token.combine(self._buffer))
+            self._buffer.clear()
+
 
     
     def _push_composite(self, token: Keyword):

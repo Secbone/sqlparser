@@ -1,11 +1,12 @@
-from .lexer import parse
+from time import time
+from sqlparser import parse
 
 
 sql = '''
     SELECT 
     col1, 
     col2, 
-    count(-10) 
+    count(10) 
     from tab1 
     where id > 10 
     and col2 in (
@@ -18,10 +19,12 @@ sql = '''
     order by col2-1
 '''
 
-for t in parse(sql):
-    print(t)
 
 
+start = time()
 
-def test_lexer():
-    pass
+for i in range(10):
+    parse(sql)
+end = time()
+
+print(end - start)
