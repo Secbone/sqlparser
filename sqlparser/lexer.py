@@ -31,6 +31,10 @@ class Lexer:
         return None
     
     @property
+    def sub_opening(self):
+        return isinstance(self.last_token, Sub) and self.last_token.opening
+    
+    @property
     def size(self):
         return len(self.tokens)
     
@@ -64,14 +68,19 @@ class Lexer:
         
     
     def _dispatch_token(self, token: Token):
-        if isinstance(self.last_token, Function) and not self.last_token.is_close:
-            self._push_function(token)
+        if self.sub_opening:
+            self._push_sub(token)
+        # if isinstance(self.last_token, Function) and not self.last_token.is_close:
+        #     self._push_function(token)
         elif isinstance(token, Paren):
             self._push_paren(token)
         elif isinstance(token, Operator):
             self._push_operator(token)
         else:
             self._push(token)
+
+    def _push_sub(self, token):
+        self.last_token.push(token)
 
     def _push_function(self, token: Token):
         func = self.last_token
@@ -103,8 +112,7 @@ class Lexer:
             else:
                 # sub sentence
                 # TODO sub sentence recursive push
-                self._push(token)
-                # self._paren_stack.append(self.size)
+                self._push(Sub(''))
         else:
             # close paren
             self._push(token)
@@ -121,7 +129,7 @@ class Lexer:
         if not l_token.check(token):
             # error check
             # TODO convert token type when error
-            self._push(l_token.combine(self._buffer))
+            self._dispatch_token(l_token.combine(self._buffer))
             self._buffer.clear()
             
             if isinstance(token, Buffer):
@@ -134,7 +142,7 @@ class Lexer:
         self._buffer.append(token)
 
         if l_token.is_end(token):
-            self._push(l_token.combine(self._buffer))
+            self._dispatch_token(l_token.combine(self._buffer))
             self._buffer.clear()
 
 

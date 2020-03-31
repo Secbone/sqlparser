@@ -98,13 +98,25 @@ class Sub(Token):
     @property
     def tokens(self):
         return self._lexer.tokens
+    
+    @property
+    def opening(self):
+        return self._lexer.sub_opening or not self.is_close
 
     def _push(self, token: Token):
         pass
 
     def push(self, token: Token):
         self._push(token)
+        if isinstance(token, Paren) and not token.is_open and not self._lexer.sub_opening:
+            self.is_close = True
+            return
+        
         self._lexer.push(token)
+    
+    def repr(self):
+        return '(' +''.join([repr(t) for t in self.tokens]) + ')'
+
 
 class Function(Sub):
     @property
@@ -119,9 +131,6 @@ class Column(Name):
     pass
 
 class Table(Name):
-    pass
-
-class Sub(Token):
     pass
 
 class SubColumn(Sub, Column):
