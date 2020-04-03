@@ -1,1 +1,1 @@
-from .lexer import parse
+from .lexer import parse, parse_clear

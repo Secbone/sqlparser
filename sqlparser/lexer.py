@@ -3,6 +3,16 @@ from collections import deque
 
 from .regex import REG
 from .tokens import *
+from .keywords import *
+
+
+
+NAME_TOKEN_TYPE = {
+    T_COLUMN: Column,
+    T_TABLE: Table,
+}
+
+
 
 def consume(iterator, n):
     deque(islice(iterator, n), maxlen = 0)
@@ -12,8 +22,8 @@ class Lexer:
     def __init__(self):
         self.tokens = []
         self._buffer = []
-        self._last_kw_idx = 0
-        self._last_word_idx = 0
+        self._last_kw_idx = -1
+        self._last_word_idx = -1
 
     @property
     def last_keyword(self):
@@ -35,6 +45,13 @@ class Lexer:
         return isinstance(self.last_token, Sub) and self.last_token.opening
     
     @property
+    def follow_type(self):
+        if self.last_keyword is None:
+            return T_COLUMN
+        
+        return COMMON.get(self.last_keyword.keyword, T_COLUMN)
+    
+    @property
     def size(self):
         return len(self.tokens)
     
@@ -42,7 +59,7 @@ class Lexer:
         return self.size
     
     def _safe_idx(self, idx: int):
-        if idx >= self.size:
+        if idx < 0 or idx >= self.size:
             return None
         
         return self.tokens[idx]
@@ -70,8 +87,12 @@ class Lexer:
     def _dispatch_token(self, token: Token):
         if self.sub_opening:
             self._push_sub(token)
-        # if isinstance(self.last_token, Function) and not self.last_token.is_close:
-        #     self._push_function(token)
+        elif isinstance(token, Space):
+            self._push_space(token)
+        elif isinstance(token, Name):
+            self._push_name(token)
+        elif isinstance(token, Keyword):
+            self._push_keyword(token)
         elif isinstance(token, Paren):
             self._push_paren(token)
         elif isinstance(token, Operator):
@@ -79,18 +100,23 @@ class Lexer:
         else:
             self._push(token)
 
-    def _push_sub(self, token):
-        self.last_token.push(token)
 
-    def _push_function(self, token: Token):
-        func = self.last_token
-        if isinstance(token, Paren) and not token.is_open:
-            # function end
-            func.is_close = True
+    def _push_sub(self, token: Sub):
+        self.last_token.push(token)
+    
+
+    def _push_space(self, token: Space):
+        self._push(token)
+    
+
+    def _push_name(self, token: Name):
+        if isinstance(self.last_word, Name):
+            self.last_word.as_name = token.value
             return
         
-        func.push(token)
-    
+        t = NAME_TOKEN_TYPE[self.follow_type]    
+        self._push(t(token.value))
+
 
     def _push_operator(self, token: Operator):
         if not isinstance(self.last_word, Value):
@@ -144,6 +170,14 @@ class Lexer:
         if l_token.is_end(token):
             self._dispatch_token(l_token.combine(self._buffer))
             self._buffer.clear()
+    
+
+    def _push_keyword(self, token: Keyword):
+        if token.keyword == 'AS':
+            # ignore `as` keyword
+            return
+        
+        self._push(token)
 
 
     
@@ -192,3 +226,11 @@ class Lexer:
 
 def parse(sql):
     return Lexer().tokenize(sql)
+
+
+def parse_clear(sql):
+    for item in Lexer().tokenize(sql):
+        if isinstance(item, (Space, Comment)):
+            continue
+        
+        yield item
